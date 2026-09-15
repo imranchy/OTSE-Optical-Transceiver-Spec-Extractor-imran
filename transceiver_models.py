@@ -10,7 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class TransceiverSpecs(BaseModel):
     """Extract only explicitly stated values; use None when data is absent."""
 
-    model_config = ConfigDict(extra="allow", str_strip_whitespace=True)
+    # Unknown keys are extraction failures. Allowing them hides the common
+    # failure mode where the model invents a convenient nested structure
+    # instead of filling the contract used by downstream code.
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     #Module identification — vendor and part number
     vendor: Optional[str] = Field(None, description="Transceiver manufacturer or brand.")
@@ -212,7 +215,43 @@ class TransceiverSpecs(BaseModel):
 
 TransceiverDatasheet = TransceiverSpecs
 
-__all__ = ["TransceiverSpecs", "TransceiverDatasheet"]
+
+class ApplicationMode(BaseModel):
+    """One selectable optical operating mode copied from one source-table row."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    label: str = Field(description="Short source-grounded label, e.g. OpenZR+ app 4.")
+    application_code: str | None = Field(None, description="Application or CMIS code exactly as printed.")
+    standard: str | None = Field(None, description="Applicable standard or MSA exactly as printed.")
+    payload_gbps: float | None = Field(None, description="Payload or line rate in Gbps.")
+    host_format: str | None = Field(None, description="Host format exactly as printed.")
+    electrical_interface: str | None = Field(None, description="Electrical host interface exactly as printed.")
+    fec_type: str | None = Field(None, description="FEC type exactly as printed.")
+    modulation_format: str | None = Field(None, description="Modulation format exactly as printed.")
+    reach_km: float | None = Field(None, description="Operating reach in km.")
+    tx_power_min_dbm: float | None = Field(None, description="Minimum transmitter power in dBm.")
+    tx_power_max_dbm: float | None = Field(None, description="Maximum transmitter power in dBm.")
+    rx_sensitivity_dbm: float | None = Field(None, description="Receiver sensitivity in dBm.")
+    rx_osnr_db: float | None = Field(None, description="Receiver OSNR value in dB.")
+    rx_osnr_0_5db_penalty_db: float | None = Field(None, description="Receiver OSNR at 0.5 dB penalty.")
+    rx_osnr_1db_penalty_db: float | None = Field(None, description="Receiver OSNR at 1 dB penalty.")
+    cd_tolerance_ps_nm: float | None = Field(None, description="Chromatic-dispersion or CDC range in ps/nm.")
+    notes: str | None = Field(None, description="Only source conditions or qualifiers for this row.")
+
+
+class ApplicationModeSet(BaseModel):
+    """Schema-constrained response for a datasheet's application-mode tables."""
+
+    model_config = ConfigDict(extra="forbid")
+    modes: list[ApplicationMode] = Field(default_factory=list)
+
+__all__ = [
+    "ApplicationMode",
+    "ApplicationModeSet",
+    "TransceiverDatasheet",
+    "TransceiverSpecs",
+]
 
 FIELD_BUNDLES = {
     "identification": ["vendor", "model", "form_factor", "standards_claimed"],

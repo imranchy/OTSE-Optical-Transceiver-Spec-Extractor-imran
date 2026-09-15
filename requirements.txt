@@ -4,13 +4,13 @@
 #
 #   pip install -r requirements.txt
 #
-# Note: inference itself runs in an external llama-server process and is not a
-# Python dependency. See README for how to start it.
+# Note: inference runs in a local Ollama process and is not a Python
+# dependency. See QWEN14B_SETUP.md for how to start it.
 
 # UI
 streamlit==1.58.0
 
-# LLM client (points at the local OpenAI-compatible llama-server endpoint)
+# LLM client (points at Ollama's local OpenAI-compatible endpoint)
 openai==2.37.0
 
 # Schema definition and validation
@@ -20,5 +20,5 @@ pydantic==2.13.4
 pymupdf==1.27.2.3
 pymupdf4llm==1.27.2.3
 
-# llama-server health and model-list probing
+# Ollama health and model-list probing
 requests==2.34.2

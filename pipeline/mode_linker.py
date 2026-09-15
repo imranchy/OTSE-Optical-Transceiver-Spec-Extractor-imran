@@ -1,15 +1,4 @@
-"""Step 3: Mode synthesis — link multi-valued atoms into configuration modes.
-
-Takes the flat extracted specs and identifies which atomic values belong to
-the same logical operating mode (e.g. same table row, same application code).
-
-## Module-level context (single-valued, applies to all modes)
-
-```json
-{general}
-```
-
-"""
+"""Direct, schema-constrained extraction of application-mode tables."""
 
 from __future__ import annotations
 
@@ -19,160 +8,99 @@ import re
 from pathlib import Path
 from typing import Any
 
-from openai import OpenAI
+from pipeline.atom_extractor import BASE_URL, _schema_for_llm, extract_schema
 from pipeline.pdf_parser import ParsedDatasheet
-from pipeline.atom_extractor import _parse_json_from_response, BASE_URL
-from transceiver_models import MODE_FIELDS
+from transceiver_models import ApplicationModeSet, MODE_FIELDS
 
 logger = logging.getLogger(__name__)
 
-LINKING_SYSTEM_PROMPT = """\
-You are given a pool of atomic parameter values extracted from an optical transceiver datasheet, \
-plus the original datasheet content for context.
+MODE_SYSTEM_PROMPT = """You extract optical-transceiver application modes.
 
-Task: group these multi-valued parameters into coherent operating modes. \
-Each mode represents one selectable configuration (e.g. a table row, an application code, \
-a host-to-media binding).
+Each output item represents exactly one selectable operating-mode table row.
+Copy only values that co-occur in that row. Never mix values from separate
+rows, never infer a missing value, and never output glossary definitions.
+Use null for a missing scalar. Return all source rows from OIF, OpenZR+,
+OpenROADM, or equivalent application-mode tables.
 
-Rules:
-- Each mode must include values that co-occur in the source (same row/section/application).
-- Interfaces can be multiple per mode
-- For multiple model numbers, each model should be treated as a separate mode. 
-- Use the datasheet content to determine which values belong together.
-- Assign a short descriptive label to each mode.
-- Return ONLY valid JSON matching the schema below
-- for amplified and unamplified values, create separate modes.
-- Assignment of parameters to each mode should be performed on definitive evidence. Do not create modes based on speculation or guesswork.
+Mapping rules:
+- Copy the value from an "Application mode", "Application code", or "CMIS
+  Application Code" column into application_code, even if it is only a number.
+- label is a readable name such as "OpenZR+ app 4"; it must not replace
+  application_code.
+- Map a "Line rate" or "Payload" value such as 400G to payload_gbps as 400.
 """
 
-
-USER_PROMPT_TEMPLATE = """\
-## Multi-valued parameters to group
-
+MODE_PROMPT_TEMPLATE = """## Output JSON schema
 ```json
-{atoms}
+{schema}
 ```
 
-## Original Datasheet Content
+## Module-level context
+```json
+{general}
+```
 
+## Datasheet content
 {content}
 
----
-
-## Output Schema
-
-Return a JSON object:
-```json
-{{
-  "modes": [
-    {{
-      "label": "<short mode name>",
-      {field_template}
-    }}
-  ]
-}}
-```
-
-Group the multi-valued atoms into modes. Return only the JSON.
+Extract application-mode rows only. Return one JSON object conforming exactly to the schema.
 """
-
-
-def _chunk_by_sections(md_text: str) -> list[tuple[str, str]]:
-    """Split markdown into (heading, body) chunks by top-level headings."""
-    lines = md_text.splitlines(keepends=True)
-    chunks: list[tuple[str, str]] = []
-    current_heading = ""
-    current_body: list[str] = []
-
-    for line in lines:
-        if re.match(r"^#{1,6}\s+", line):
-            if current_heading or current_body:
-                chunks.append((current_heading, "".join(current_body)))
-            current_heading = line.strip().lstrip("#").strip()
-            current_body = []
-        else:
-            current_body.append(line)
-
-    if current_heading or current_body:
-        chunks.append((current_heading, "".join(current_body)))
-    return chunks
-
-
-def _normalize(text: str) -> str:
-    """Lowercase, collapse whitespace, strip punctuation for fuzzy matching."""
-    return re.sub(r"[^a-z0-9 ]", "", text.lower()).strip()
-
-
-def _filter_sections_by_provenance(
-    md_text: str, provenance: str | list[str]
-) -> str:
-    """Return only the sections referenced in provenance_datasheet_sections.
-
-    Falls back to full text if provenance lists as many or more sections than exist.
-    """
-    chunks = _chunk_by_sections(md_text)
-    if not chunks:
-        return md_text
-
-    # Parse provenance into normalized target names.
-    provenance_items = (
-        provenance if isinstance(provenance, list) else re.split(r"[,;\n]", provenance)
-    )
-    targets = [_normalize(item) for item in provenance_items if item.strip()]
-    if not targets:
-        return md_text
-
-    total_sections = len([h for h, _ in chunks if h])
-    if len(targets) >= total_sections:
-        return md_text
-
-    # Match each chunk heading against targets using substring containment
-    selected: list[str] = []
-    for heading, body in chunks:
-        norm_heading = _normalize(heading)
-        if not norm_heading:
-            continue
-        for target in targets:
-            if target in norm_heading or norm_heading in target:
-                selected.append(f"## {heading}\n{body}")
-                break
-
-    if not selected:
-        logger.warning("Provenance filtering matched 0 sections; using full text")
-        return md_text
-
-    logger.info("Provenance filter: %d/%d sections selected", len(selected), total_sections)
-    return "\n\n".join(selected)
 
 
 def separate_atoms(specs_dict: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Split specs into (multi_valued_mode_atoms, general_params).
-
-    Mode fields with >1 value go to multi_valued.
-    Mode fields with exactly 1 value or general fields go to general.
-    """
-    multi = {}
-    general = {}
-
+    """Retained for UI/report compatibility; rows now come directly from source."""
+    multi: dict[str, Any] = {}
+    general: dict[str, Any] = {}
     for key, value in specs_dict.items():
-        if key in MODE_FIELDS:
-            if isinstance(value, list) and len(value) > 1:
-                multi[key] = value
-            elif value is not None:
-                general[key] = value
-        else:
-            if value is not None:
-                general[key] = value
-
+        if key in MODE_FIELDS and isinstance(value, list) and len(value) > 1:
+            multi[key] = value
+        elif value is not None:
+            general[key] = value
     return multi, general
 
 
-def _build_field_template(multi: dict[str, Any]) -> str:
-    """Build the per-mode field list for the output schema."""
-    lines = []
-    for field in multi:
-        lines.append(f'      "{field}": "<value from pool>"')
-    return ",\n".join(lines)
+def _filter_sections_by_provenance(
+    markdown: str, provenance: str | list[str]
+) -> str:
+    """Return source sections named by provenance for the UI preview.
+
+    The extraction pipeline no longer depends on this filter, but the Streamlit
+    UI uses it to show the operator which sections supported an extraction.
+    """
+    targets = provenance if isinstance(provenance, list) else re.split(r"[,;\n]", provenance)
+    normalized_targets = {
+        re.sub(r"[^a-z0-9 ]", "", value.lower()).strip()
+        for value in targets
+        if value.strip()
+    }
+    if not normalized_targets:
+        return markdown
+
+    sections: list[tuple[str, list[str]]] = []
+    heading = ""
+    body: list[str] = []
+    for line in markdown.splitlines(keepends=True):
+        if re.match(r"^#{1,6}\s+", line):
+            if heading or body:
+                sections.append((heading, body))
+            heading = re.sub(r"^#{1,6}\s+", "", line).strip()
+            body = [line]
+        else:
+            body.append(line)
+    if heading or body:
+        sections.append((heading, body))
+
+    selected = []
+    for section_heading, section_body in sections:
+        normalized_heading = re.sub(r"[^a-z0-9 ]", "", section_heading.lower()).strip()
+        if any(target in normalized_heading or normalized_heading in target for target in normalized_targets):
+            selected.append("".join(section_body))
+    return "\n".join(selected) if selected else markdown
+
+
+def _mode_content(parsed: ParsedDatasheet) -> str:
+    content = parsed.markdown or parsed.full_text
+    return content if len(content) <= 80_000 else content[:80_000] + "\n\n[...truncated...]"
 
 
 def synthesize_modes(
@@ -182,99 +110,41 @@ def synthesize_modes(
     run_dir: Path | None = None,
     model_id: str | None = None,
     base_url: str = BASE_URL,
-    temperature: float = 0.1,
-    max_tokens: int = 16384,
+    temperature: float = 0.0,
+    max_tokens: int = 4096,
 ) -> tuple[dict[str, Any] | None, dict[str, Any], dict[str, Any]]:
-    """Run mode synthesis and return (modes_result, multi_atoms, general_params).
-
-    Returns (None, multi, general) on failure.
-    """
+    """Extract mode rows directly, rather than reconstructing detached atoms."""
     multi, general = separate_atoms(specs_dict)
-
-    if not multi:
-        logger.info("No multi-valued mode fields — single mode module.")
-        return {"modes": [{"label": "default", **{k: v for k, v in specs_dict.items() if k in MODE_FIELDS and v is not None}}]}, multi, general
-
-    client = OpenAI(base_url=f"{base_url}/v1", api_key="no-key", timeout=600.0)
-
-    if not model_id:
-        models_resp = client.models.list()
-        model_id = models_resp.data[0].id if models_resp.data else "default"
-
-    content = parsed.markdown or parsed.full_text
-
-    # Filter to only provenance-referenced sections if available
-    provenance = specs_dict.get("provenance_datasheet_sections")
-    if provenance and isinstance(provenance, (str, list)):
-        content = _filter_sections_by_provenance(content, provenance)
-
-    if len(content) > 80_000:
-        content = content[:80_000] + "\n\n[...truncated...]"
-
-    field_template = _build_field_template(multi)
-    prompt = USER_PROMPT_TEMPLATE.format(
-        atoms=json.dumps(multi, indent=2),
+    prompt = MODE_PROMPT_TEMPLATE.format(
+        schema=json.dumps(_schema_for_llm(ApplicationModeSet), indent=2),
         general=json.dumps(general, indent=2),
-        content=content,
-        field_template=field_template,
+        content=_mode_content(parsed),
     )
-
-    logger.info("Synthesizing modes: %d multi-valued fields, model=%s", len(multi), model_id)
-
-    response = client.chat.completions.create(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": LINKING_SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
+    result, raw = extract_schema(
+        model_type=ApplicationModeSet,
+        schema_name="application_modes",
+        system_prompt=MODE_SYSTEM_PROMPT,
+        user_prompt=prompt,
+        model_id=model_id or "qwen3:14b",
+        base_url=base_url,
         temperature=temperature,
         max_tokens=max_tokens,
     )
-    choice = response.choices[0]
-    raw_response = choice.message.content or ""
-
     if run_dir is not None:
         (run_dir / "raw_llm_modes_response.json").write_text(
-            json.dumps(
-                {
-                    "finish_reason": choice.finish_reason,
-                    "content": raw_response,
-                    "reasoning_content": getattr(choice.message, "reasoning_content", None),
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+            json.dumps(raw, indent=2), encoding="utf-8"
         )
-
-    if not raw_response.strip():
-        reasoning = getattr(choice.message, "reasoning_content", None) or ""
-        if reasoning:
-            raw_response = reasoning
-
-    if not raw_response.strip():
-        logger.error("Mode synthesis: empty LLM response (finish_reason=%s)", choice.finish_reason)
+    if result is None:
         return None, multi, general
-
-    result = _parse_json_from_response(raw_response)
-    if not isinstance(result, dict) or "modes" not in result:
-        logger.warning("Mode synthesis: unexpected response structure")
-        if isinstance(result, list):
-            result = {"modes": result}
-        else:
-            return None, multi, general
-
-    logger.info("Mode synthesis: %d modes identified", len(result.get("modes", [])))
-    return result, multi, general
+    data = result.model_dump(mode="json")
+    logger.info("Extracted %d application modes directly from source rows", len(data["modes"]))
+    return data, multi, general
 
 
 def store_modes(run_dir: Path, modes: dict[str, Any], multi: dict[str, Any], general: dict[str, Any]) -> None:
-    """Save mode synthesis results to the run directory."""
-    (run_dir / "raw_llm_modes.json").write_text(
-        json.dumps(modes, indent=2), encoding="utf-8"
-    )
+    """Save direct mode extraction together with legacy UI context."""
+    (run_dir / "raw_llm_modes.json").write_text(json.dumps(modes, indent=2), encoding="utf-8")
     (run_dir / "modes.json").write_text(json.dumps(modes, indent=2), encoding="utf-8")
     (run_dir / "mode_atoms.json").write_text(
-        json.dumps({"multi_valued": multi, "general": general}, indent=2),
-        encoding="utf-8",
+        json.dumps({"multi_valued": multi, "general": general}, indent=2), encoding="utf-8"
     )
-    logger.info("Modes saved to %s", run_dir)

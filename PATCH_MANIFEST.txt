@@ -1,0 +1,11 @@
+Required replacement/addition:
+  pipeline/atom_extractor.py          REPLACE existing file
+  pipeline/extraction_quality.py      ADD new file
+
+Optional validation material:
+  tests/test_extraction_quality.py
+  validation_samples/smartoptics_public_excerpt.txt
+  validation_samples/nokia_public_excerpt.txt
+  README_v5_PATCH.md
+
+No app.py change required. Keep your existing mode_linker.py containing _filter_sections_by_provenance.

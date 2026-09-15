@@ -1,17 +1,15 @@
 """Streamlit UI for the transceiver datasheet extraction pipeline.
 
-Uses the local llama-server router (same as C:\\Haris\\Chatbot).
+Uses Ollama's local OpenAI-compatible API.
 """
 
 import json
-import os
 import tempfile
 import time
 from pathlib import Path
 
 import requests
 import streamlit as st
-from openai import OpenAI
 from pydantic import ValidationError
 
 from pipeline.pdf_parser import parse_pdf
@@ -29,7 +27,6 @@ from generate_report import generate_html
 from generate_modes_report import generate_modes_html
 from transceiver_models import TransceiverSpecs
 
-MODEL_DIR = r"C:\Haris\models"
 REPORTS_DIR = Path("reports")
 
 st.set_page_config(page_title="Transceiver Spec Extractor", layout="wide")
@@ -42,7 +39,7 @@ st.title("Transceiver Datasheet Extractor")
 
 def _server_up() -> bool:
     try:
-        return requests.get(f"{BASE_URL}/health", timeout=5).ok
+        return requests.get(f"{BASE_URL}/api/version", timeout=5).ok
     except requests.RequestException:
         return False
 
@@ -51,16 +48,6 @@ def _list_models() -> list[str]:
     resp = requests.get(f"{BASE_URL}/v1/models", timeout=15)
     resp.raise_for_status()
     return [m["id"] for m in resp.json().get("data", [])]
-
-
-def _disk_sizes() -> dict[str, float]:
-    sizes: dict[str, float] = {}
-    if not os.path.isdir(MODEL_DIR):
-        return sizes
-    for entry in os.scandir(MODEL_DIR):
-        if entry.is_file() and entry.name.lower().endswith(".gguf"):
-            sizes[os.path.splitext(entry.name)[0]] = entry.stat().st_size / 1024**3
-    return sizes
 
 
 # --------------------------------------------------------------------------- #
@@ -72,8 +59,8 @@ with st.sidebar:
 
     if not _server_up():
         st.error(
-            "llama-server router is not reachable on port 8080.\n\n"
-            "Start it with:\n```\nllama-server --models-dir C:\\Haris\\models --models-max 1\n```"
+            "Ollama is not reachable on port 11434.\n\n"
+            "Start it with:\n```\nollama serve\n```"
         )
         st.stop()
 
@@ -81,19 +68,18 @@ with st.sidebar:
 
     models = _list_models()
     if not models:
-        st.error(f"No models found. Place GGUF files in {MODEL_DIR}")
+        st.error("No Ollama models found. Install the target model with:\n```\nollama pull qwen3:14b\n```")
         st.stop()
 
-    sizes = _disk_sizes()
-    labels = [f"{m}  ({sizes[m]:.1f} GB)" if m in sizes else m for m in models]
-    choice = st.selectbox("Model", labels)
-    model_id = models[labels.index(choice)]
+    default_model = "qwen3:14b"
+    default_index = models.index(default_model) if default_model in models else 0
+    model_id = st.selectbox("Model", models, index=default_index)
 
     st.divider()
     st.header("Settings")
-    temperature = st.slider("Temperature", 0.0, 1.0, 0.1, 0.05)
-    max_tokens = st.slider("Max tokens", 2048, 32768, 16384, 1024)
-    st.caption("Thinking models need high token budgets")
+    temperature = st.slider("Temperature", 0.0, 1.0, 0.0, 0.05)
+    max_tokens = st.slider("Max tokens", 1024, 8192, 4096, 512)
+    st.caption("Schema-constrained extraction runs with Qwen reasoning disabled.")
 
 # --------------------------------------------------------------------------- #
 # Main area
@@ -302,18 +288,18 @@ with tab_extract:
 
         # --- Step 4: Mode Synthesis ---
         st.divider()
-        st.subheader("Step 2 — Mode Synthesis")
+        st.subheader("Step 2 — Application-Mode Extraction")
         if st.button("Synthesize Modes", type="primary"):
             source = display_data
             multi, general = separate_atoms(source)
             st.session_state.pop("modes_result", None)
 
             if multi:
-                st.caption(f"{len(multi)} multi-valued fields to link into modes")
+                st.caption("Mode rows are extracted directly from the source tables and validated against a separate schema.")
                 with st.expander("Multi-valued atoms"):
                     st.json(multi)
 
-            with st.status("Linking atoms into modes...", expanded=True) as status:
+            with st.status("Extracting application-mode rows...", expanded=True) as status:
                 stage_started = time.perf_counter()
                 modes_result, _, _ = synthesize_modes(
                     source,

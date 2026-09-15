@@ -65,7 +65,7 @@ def run(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Extract transceiver specs from a PDF datasheet.")
     parser.add_argument("pdf", help="Path to the PDF datasheet")
-    parser.add_argument("--model", default=None, help="Model ID on the llama-server router")
+    parser.add_argument("--model", default="qwen3:14b", help="Ollama model ID")
     parser.add_argument("--runs-dir", default=None, help="Directory to store runs")
     args = parser.parse_args()
 

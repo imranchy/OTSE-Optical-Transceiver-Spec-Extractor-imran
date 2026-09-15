@@ -1,0 +1,2 @@
+Public validation excerpt based on Smartoptics SO-TQSFP-DD-4CC-ZR datasheet:
+SO-TQSFP-DD-4CC-ZR; QSFP-DD; OIF 400ZR; 400 Gbps; SM (2x LC); 120 km; 191.28-196.12 THz; 100 GHz grid; <17 W; 0 C to +70 C; 60 Gbaud; 16QAM; CMIS4.0.
