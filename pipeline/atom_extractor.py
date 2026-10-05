@@ -19,7 +19,7 @@ from pipeline.pdf_parser import ParsedDatasheet
 from pipeline.extraction_quality import coverage_issues, deterministic_hints, merge_missing
 
 logger = logging.getLogger(__name__)
-BASE_URL = "http://127.0.0.1:8080"
+BASE_URL = "http://127.0.0.1:11434"
 
 _LIST_FIELDS: set[str] = {
     f for f, info in TransceiverSpecs.model_fields.items()
@@ -124,6 +124,88 @@ def _parse_json_from_response(raw: str) -> Any:
         except json.JSONDecodeError:
             pass
     return {}
+
+def _schema_for_llm(model_type: type) -> dict[str, Any]:
+    """Return a compact JSON schema for an LLM-facing structured extraction task."""
+    schema = model_type.model_json_schema()
+
+    # Remove metadata that is useful for documentation but not necessary
+    # for the model prompt.
+    schema.pop("title", None)
+
+    return schema
+
+
+def extract_schema(
+    *,
+    model_type: type,
+    schema_name: str,
+    system_prompt: str,
+    user_prompt: str,
+    model_id: str,
+    base_url: str = BASE_URL,
+    temperature: float = 0.0,
+    max_tokens: int = 4096,
+) -> tuple[Any | None, dict[str, Any]]:
+    """Run a generic schema-constrained extraction and validate with Pydantic."""
+
+    client = OpenAI(
+        base_url=f"{base_url}/v1",
+        api_key="no-key",
+        timeout=600.0,
+    )
+
+    response = client.chat.completions.create(
+        model=model_id,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+
+    choice = response.choices[0]
+    text = choice.message.content or ""
+
+    if not text.strip():
+        text = getattr(choice.message, "reasoning_content", None) or ""
+
+    raw: dict[str, Any] = {
+        "schema_name": schema_name,
+        "model_id": model_id,
+        "finish_reason": choice.finish_reason,
+        "response_text": text,
+    }
+
+    if not text.strip():
+        logger.warning(
+            "Empty LLM response for schema=%s (finish_reason=%s)",
+            schema_name,
+            choice.finish_reason,
+        )
+        return None, raw
+
+    parsed = _parse_json_from_response(text)
+    raw["parsed"] = parsed
+
+    if not isinstance(parsed, dict) or not parsed:
+        logger.warning("Could not parse valid JSON for schema=%s", schema_name)
+        return None, raw
+
+    try:
+        result = model_type.model_validate(parsed)
+        return result, raw
+    except ValidationError as exc:
+        logger.warning(
+            "Schema validation failed for %s: %d errors",
+            schema_name,
+            exc.error_count(),
+        )
+
+        raw["validation_errors"] = exc.errors()
+
+        return None, raw
 
 
 def _truncate(text: str, max_chars: int) -> str:
