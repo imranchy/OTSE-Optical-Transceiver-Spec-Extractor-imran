@@ -42,3 +42,39 @@ Desktop.ini
 
 # Source datasheets are third-party copyrighted material — keep them local.
 
+# Reviewed/generated gold and training artifacts
+gold_dataset/final_gold/
+gold_dataset/splits/
+gold_dataset/qlora/
+
+# Local source / evaluation PDFs
+gold_dataset/source_pdfs/
+gold_dataset/heldout_pdfs/
+gold_dataset/needs_replacement/
+
+# Generated benchmark and verification artifacts
+gold_dataset/benchmark_runs/
+gold_dataset/reports/
+gold_dataset/gold_candidates/
+gold_dataset/final_gold/
+gold_dataset/splits/
+gold_dataset/qlora/
+
+# Training outputs / checkpoints / adapters
+training_outputs/
+checkpoint-*/
+adapter_final/
+
+# Hugging Face / model caches
+.cache/
+huggingface/
+models/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local Ollama experiment definitions if desired
+Modelfile.qwen3-4b-otse8k
+Modelfile.qwen3-14b-otse8k
+

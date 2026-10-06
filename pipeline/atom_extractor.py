@@ -56,7 +56,8 @@ FIELD_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
 SYSTEM_PROMPT = """You are an optical-transceiver datasheet extraction engine.
 Extract only facts explicitly supported by the supplied datasheet text.
 Rules:
-- Copy numeric values exactly as represented semantically; do not invent, convert units, or calculate.
+- Copy numeric values exactly when the source already uses the schema's unit.
+- When a schema field specifies a canonical unit, normalize an explicitly stated source value into that unit only when the conversion is deterministic (for example, 500 m -> 0.5 km for reach_km). Do not otherwise calculate, infer, round, or derive values.
 - If a requested field is absent, return null (or [] for list fields when appropriate).
 - Collect all distinct explicitly stated values for list fields.
 - Keep module-level values separate from application/mode-specific values; do not guess correlations here.
