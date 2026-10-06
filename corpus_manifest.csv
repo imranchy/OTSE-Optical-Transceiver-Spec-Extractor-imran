@@ -1,0 +1,18 @@
+role,vendor,model_or_family,coverage,source
+train_candidate,Coherent,FTLX2672D3XX,10G BiDi SFP+ 30km,official direct PDF
+train_candidate,Coherent,FTLC1154SDPL,100G LR4 QSFP28 10km,official direct PDF
+train_candidate,Coherent,FTLX2471DC0XX,10G CWDM LR SFP+,official direct PDF
+train_candidate,Coherent,FTLF8536P5XYZ,25G SR multi-rate SFP28,official direct PDF
+train_candidate,Coherent,FTLF8536W4BTV,25G SR eCPRI SFP28,official direct PDF
+train_candidate,Coherent,FTCD4523E3PCM,400G DR4 QSFP-DD,official direct PDF
+train_candidate,Coherent,FTCD8613E2PCM,400G SR8 QSFP-DD,official direct PDF
+train_candidate,Coherent,FTCD4323E2PCL,400G LR4 QSFP-DD 10km,official direct PDF
+train_candidate,Coherent,FTL410QE4C,40G SR4 QSFP+,official direct PDF
+train_candidate,Coherent,FTL410QD4N,40G SR4 extended temperature QSFP+,official direct PDF
+train_candidate,Smartoptics,SO-QSFP28-ER4,100G ER4 QSFP28,provided native-text PDF
+train_candidate,Smartoptics,TQD027-S55C,400G coherent ER QSFP-DD,provided native-text PDF
+train_candidate,Smartoptics,SO-TQSFPDD4CCZRP,400ZR/OpenZR+ coherent QSFP-DD,provided native-text PDF
+train_candidate,Smartoptics,TQD033-TUNC-SO,400ZR+ tunable coherent QSFP-DD,provided native-text PDF
+train_candidate,Cisco,QSFP28 100G ZR High TX,100G coherent ZR,provided native-text PDF
+heldout,Cisco,400G QSFP family,400G multi-product stress test,provided native-text PDF
+heldout,Cisco,OSFP 800G family,800G multi-product stress test,provided native-text PDF
