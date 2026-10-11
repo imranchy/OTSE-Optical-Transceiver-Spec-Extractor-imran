@@ -1,0 +1,3 @@
+SHA256 hash of deployment\otse-qwen4b-Q4_K_M.gguf:
+5f5296c65b9dd961f35748873360403fc1caee534bb5a842e632f11c81c5d8b2
+CertUtil: -hashfile command completed successfully.

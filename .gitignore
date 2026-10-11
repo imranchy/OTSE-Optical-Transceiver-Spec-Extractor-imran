@@ -127,3 +127,28 @@ OTSE_Research_Archive/
 # Local PDF corpus
 source_pdfs/
 data/corpus_v2/raw_pdfs/
+
+# Generated extraction outputs
+/reports/
+/runs/
+/runs_archive/
+/example_files/
+/example.html
+
+# Local model binaries
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Local runtime and conversion tools
+/deployment/llama.cpp/
+/deployment/llama-bin/
+/deployment/.venv-convert/
+
+# Python caches and environments
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
