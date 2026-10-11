@@ -29,10 +29,14 @@ _LIST_FIELDS: set[str] = {
 # Small, semantically coherent passes work better on 4-bit local models than one
 # very large all-fields request, while preserving the same final schema.
 FIELD_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    # IMPORTANT: These groups intentionally match the QLoRA atomic training
+    # targets exactly.  notes/provenance_datasheet_sections are metadata and are
+    # not part of the trained atomic completions.  Asking for them in every pass
+    # caused long, repetitive metadata generations that could consume the
+    # remaining context window and truncate otherwise-correct JSON.
     ("identity_and_physical", (
         "vendor", "model", "form_factor", "standards_claimed", "connector_type",
         "fiber_type", "temp_min_c", "temp_max_c", "power_consumption_w",
-        "provenance_datasheet_sections", "notes",
     )),
     ("interfaces_and_spectrum", (
         "wavelength_min_nm", "wavelength_max_nm", "wavelength_center_nm",
@@ -40,7 +44,6 @@ FIELD_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
         "channel_spacing_ghz", "channel_total", "host_interface_name",
         "host_interface_id_hex", "host_interface_id", "media_interface_name",
         "media_interface_id_hex", "media_interface_id", "frame", "standards_code",
-        "provenance_datasheet_sections", "notes",
     )),
     ("optical_performance_and_fec", (
         "baud_rate_gbaud", "bit_rate_gbps", "roll_off_percent", "modulation_format",
@@ -49,7 +52,7 @@ FIELD_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
         "rx_osnr_tolerance_db_max", "rx_overload_dbm", "cd_tolerance_ps_nm",
         "pdl_db", "pmd_tolerance_ps", "fec_type", "fec_overhead_percent",
         "pre_fec_ber_threshold", "post_fec_ber_target", "extinction_ratio_db",
-        "los_assert_dbm", "los_deassert_dbm", "provenance_datasheet_sections", "notes",
+        "los_assert_dbm", "los_deassert_dbm",
     )),
 )
 
@@ -94,14 +97,41 @@ Datasheet content:
 
 
 def _coerce_types(raw: dict[str, Any]) -> dict[str, Any]:
+    """Apply conservative, information-preserving schema-shape normalization.
+
+    This function does not infer optical facts. It only repairs deterministic
+    container-shape mismatches before Pydantic validation:
+
+    - scalar -> one-item list for schema list fields
+    - one-item list -> scalar for schema scalar fields
+    - multi-item list[str] -> semicolon-joined string for schema scalar-string
+      metadata fields (currently notes/suggestions)
+
+    The final case fixes a common LLM formatting error without changing the
+    semantic content of the extracted text.
+    """
+    joinable_scalar_strings = {"notes", "suggestions"}
+
     for key, value in list(raw.items()):
         if value is None:
             continue
+
         if key in _LIST_FIELDS:
             if not isinstance(value, list):
                 raw[key] = [value]
-        elif isinstance(value, list) and len(value) == 1:
-            raw[key] = value[0]
+            continue
+
+        if isinstance(value, list):
+            if len(value) == 1:
+                raw[key] = value[0]
+            elif (
+                key in joinable_scalar_strings
+                and value
+                and all(isinstance(item, str) for item in value)
+            ):
+                # Preserve every item while satisfying the scalar-string schema.
+                raw[key] = "; ".join(item.strip() for item in value if item.strip())
+
     return raw
 
 

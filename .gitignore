@@ -78,3 +78,52 @@ __pycache__/
 Modelfile.qwen3-4b-otse8k
 Modelfile.qwen3-14b-otse8k
 
+/data/corpus_v2/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+deployment/.venv-convert/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Large model artifacts
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.bin
+*.ckpt
+
+# Training checkpoints and generated exports
+training_outputs/
+deployment/llama.cpp/
+deployment/llama-bin/
+deployment/.venv-convert/
+
+# Generated inference artifacts
+runs/
+reports/
+*.log
+
+# Local research archives and packages
+*.zip
+cleanup_audit_*/
+OTSE_Research_Archive/
+
+# Local PDF corpus
+source_pdfs/
+data/corpus_v2/raw_pdfs/
