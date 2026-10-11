@@ -1,0 +1,8 @@
+# Development tooling. Installs the runtime set as well.
+#
+#   pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+ruff==0.16.1
+pytest==9.1.1

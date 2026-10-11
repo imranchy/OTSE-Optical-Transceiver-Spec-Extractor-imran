@@ -1,0 +1,154 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local configuration and secrets
+.env
+.env.local
+
+# Streamlit local settings
+.streamlit/secrets.toml
+
+# Editor / OS noise
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+*.swp
+
+# --- Project artifacts ---------------------------------------------------- #
+# Extraction runs and generated reports are reproducible outputs, and
+# runs/*/content.md holds parsed vendor datasheet text that should not be
+# redistributed. Both directories are recreated on demand.
+
+
+# Source datasheets are third-party copyrighted material — keep them local.
+
+# Reviewed/generated gold and training artifacts
+gold_dataset/final_gold/
+gold_dataset/splits/
+gold_dataset/qlora/
+
+# Local source / evaluation PDFs
+gold_dataset/source_pdfs/
+gold_dataset/heldout_pdfs/
+gold_dataset/needs_replacement/
+
+# Generated benchmark and verification artifacts
+gold_dataset/benchmark_runs/
+gold_dataset/reports/
+gold_dataset/gold_candidates/
+gold_dataset/final_gold/
+gold_dataset/splits/
+gold_dataset/qlora/
+
+# Training outputs / checkpoints / adapters
+training_outputs/
+checkpoint-*/
+adapter_final/
+
+# Hugging Face / model caches
+.cache/
+huggingface/
+models/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local Ollama experiment definitions if desired
+Modelfile.qwen3-4b-otse8k
+Modelfile.qwen3-14b-otse8k
+
+/data/corpus_v2/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+deployment/.venv-convert/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Large model artifacts
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.bin
+*.ckpt
+
+# Training checkpoints and generated exports
+training_outputs/
+deployment/llama.cpp/
+deployment/llama-bin/
+deployment/.venv-convert/
+
+# Generated inference artifacts
+runs/
+reports/
+*.log
+
+# Local research archives and packages
+*.zip
+cleanup_audit_*/
+OTSE_Research_Archive/
+
+# Local PDF corpus
+source_pdfs/
+data/corpus_v2/raw_pdfs/
+
+# Generated extraction outputs
+/reports/
+/runs/
+/runs_archive/
+/example_files/
+/example.html
+
+# Local model binaries
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Local runtime and conversion tools
+/deployment/llama.cpp/
+/deployment/llama-bin/
+/deployment/.venv-convert/
+
+# Python caches and environments
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/

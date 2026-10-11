@@ -1,0 +1,2 @@
+Public validation excerpt based on Nokia 400ZR/ZR+ coherent modules page/datasheet:
+QDDCO4Z/QDDCO4/QDDCO4H; QSFP-DD; 100G-400G; OIF 400ZR; OpenZR+; QPSK; 8QAM; 16QAM.

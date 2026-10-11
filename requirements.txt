@@ -1,0 +1,24 @@
+# OTSE runtime dependencies.
+# Pinned exactly: extraction results depend on the versions used, so a run is
+# only reproducible against a known environment. Verified on Python 3.11.9.
+#
+#   pip install -r requirements.txt
+#
+# Note: inference runs in a local Ollama process and is not a Python
+# dependency. See README.md for local Qwen3-4B deployment instructions.
+
+# UI
+streamlit==1.58.0
+
+# LLM client (points at Ollama's local OpenAI-compatible endpoint)
+openai==2.37.0
+
+# Schema definition and validation
+pydantic==2.13.4
+
+# PDF parsing. pymupdf4llm tracks pymupdf's version; keep the two in step.
+pymupdf==1.27.2.3
+pymupdf4llm==1.27.2.3
+
+# Ollama health and model-list probing
+requests==2.34.2
