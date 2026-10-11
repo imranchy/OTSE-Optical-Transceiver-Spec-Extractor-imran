@@ -125,7 +125,7 @@ def synthesize_modes(
         schema_name="application_modes",
         system_prompt=MODE_SYSTEM_PROMPT,
         user_prompt=prompt,
-        model_id=model_id or "qwen3:14b",
+        model_id=model_id or "otse-qwen4b-final",
         base_url=base_url,
         temperature=temperature,
         max_tokens=max_tokens,

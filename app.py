@@ -71,7 +71,7 @@ with st.sidebar:
         st.error("No Ollama models found. Install the target model with:\n```\nollama pull qwen3:14b\n```")
         st.stop()
 
-    default_model = "qwen3:14b"
+    default_model = "otse-qwen4b-final"
     default_index = models.index(default_model) if default_model in models else 0
     model_id = st.selectbox("Model", models, index=default_index)
 
