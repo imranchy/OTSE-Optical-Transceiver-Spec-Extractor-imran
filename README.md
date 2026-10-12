@@ -8,6 +8,30 @@ The project combines PDF processing, domain-specific structured extraction, teac
 
 The primary deployment model is a fine-tuned **Qwen3-4B-Instruct-2507**, quantized to GGUF Q4_K_M. A larger Qwen3-14B model is used as a teacher and experimental reference.
 
+## Download the Fine-Tuned Model
+
+The original OTSE Qwen3-4B model is publicly available on Hugging Face:
+
+**[OTSE-Qwen3-4B-GGUF](https://huggingface.co/diptoimran/OTSE-Qwen3-4B-GGUF)**
+
+The repository provides the Q4_K_M quantized model used for local deployment.
+
+Download `otse-qwen4b-Q4_K_M.gguf` and place it in the `deployment/` directory.
+
+Register the model with Ollama:
+
+```bash
+ollama create otse-qwen4b-final -f Modelfile.otse-final
+```
+
+Launch the Streamlit application:
+
+```bash
+streamlit run app.py
+```
+
+The model is designed for optical transceiver specification extraction and supports human review and correction through the OTSE application.
+
 ## 1. Overview
 
 Optical transceiver datasheets contain technical information distributed across tables, paragraphs, product variants, and operating configurations. Extracting these parameters manually is time-consuming and can be inconsistent across vendors.
