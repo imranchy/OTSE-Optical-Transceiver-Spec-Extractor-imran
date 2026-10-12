@@ -2,35 +2,34 @@
 
 **Teacher-Guided QLoRA Adaptation of a Small Language Model for Structured Optical Transceiver Datasheet Extraction**
 
-OTSE is an open-source system for extracting structured technical specifications from optical transceiver datasheets using locally deployed language models.
+OTSE is an open-source research prototype for extracting structured technical specifications from optical transceiver datasheets using locally deployed language models.
 
 The project combines PDF processing, domain-specific structured extraction, teacher-guided pseudolabeling, QLoRA fine-tuning, schema validation, and optional human review.
 
-The primary deployment model is a fine-tuned **Qwen3-4B-Instruct-2507**, quantized to GGUF Q4_K_M. A larger Qwen3-14B model is used as a teacher and experimental reference.
+The primary deployment model is a fine-tuned **Qwen3-4B-Instruct-2507**, quantized to GGUF Q4_K_M. A larger Qwen3-14B model serves as the teacher and experimental reference.
 
-## Download the Fine-Tuned Model
+## Download the Fine-Tuned Models
 
-The original OTSE Qwen3-4B model is publicly available on Hugging Face:
+Both the original fine-tuned deployment model and its QLoRA adapter are available on Hugging Face.
 
-**[OTSE-Qwen3-4B-GGUF](https://huggingface.co/diptoimran/OTSE-Qwen3-4B-GGUF)**
+| Model | Description | Download |
+|---|---|---|
+| OTSE-Qwen3-4B-GGUF | Q4_K_M quantized model for local inference | [Hugging Face GGUF](https://huggingface.co/diptoimran/OTSE-Qwen3-4B-GGUF) |
+| OTSE-Qwen3-4B-QLoRA | Original LoRA adapter for research and further adaptation | [Hugging Face Adapter](https://huggingface.co/diptoimran/OTSE-Qwen3-4B-QLoRA) |
 
-The repository provides the Q4_K_M quantized model used for local deployment.
-
-Download `otse-qwen4b-Q4_K_M.gguf` and place it in the `deployment/` directory.
-
-Register the model with Ollama:
+To deploy the model, download `otse-qwen4b-Q4_K_M.gguf` into the `deployment/` directory and register it using Ollama:
 
 ```bash
 ollama create otse-qwen4b-final -f Modelfile.otse-final
 ```
 
-Launch the Streamlit application:
+Launch the application:
 
 ```bash
 streamlit run app.py
 ```
 
-The model is designed for optical transceiver specification extraction and supports human review and correction through the OTSE application.
+The application provides structured extraction, schema validation, and optional human correction.
 
 ## 1. Overview
 
@@ -69,22 +68,22 @@ Optical Transceiver Datasheet (PDF)
       Atomic Field Extraction
                 |
                 v
-   Fine-tuned Qwen3-4B Student
+    Fine-tuned Qwen3-4B Student
                 |
                 v
-       Schema Validation
+        Schema Validation
                 |
                 v
-      Structured JSON Output
+       Structured JSON Output
                 |
                 v
-      Optional Human Review
+       Optional Human Review
                 |
                 v
-      Corrected Specifications
+       Corrected Specifications
                 |
                 v
-     Storage and Reporting
+       Storage and Reporting
 ```
 
 Application-mode extraction is implemented as a separate optional stage. Its performance is not established by the atomic-field benchmark reported below.
@@ -120,12 +119,12 @@ The released GGUF can also be used with compatible llama.cpp runtimes.
 
 ### Clone the Repository
 
+Clone the public research-release branch:
+
 ```bash
-git clone <REPOSITORY_URL>
+git clone --branch release/ofc2027-public --single-branch https://github.com/imranchy/OTSE-Optical-Transceiver-Spec-Extractor-imran.git
 cd OTSE-Optical-Transceiver-Spec-Extractor-imran
 ```
-
-Replace `<REPOSITORY_URL>` with the published GitHub clone URL.
 
 ### Create a Python Environment
 
@@ -137,11 +136,7 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-The application additionally uses the `openai` Python package for its Ollama-compatible API client. If it is absent from the installed requirements, install it with:
-
-```bat
-python -m pip install openai
-```
+The runtime requirements include the `openai` Python client for communication with the local Ollama-compatible API.
 
 The research training pipeline requires additional packages including PyTorch, Transformers, PEFT, Accelerate, and bitsandbytes. Their compatible versions depend on the CUDA environment.
 
@@ -174,17 +169,21 @@ SHA256:
 5f5296c65b9dd961f35748873360403fc1caee534bb5a842e632f11c81c5d8b2
 ```
 
-The checksum is also recorded in:
+The checksum is also recorded in `models/original_student_sha256.txt`.
 
-`models/original_student_sha256.txt`
+The GGUF is distributed separately from GitHub due to its size.
 
-The GGUF is distributed separately from the Git repository due to its size.
+**Download the verified GGUF model:**
 
-**Model download:** To be published.
+[OTSE-Qwen3-4B-GGUF](https://huggingface.co/diptoimran/OTSE-Qwen3-4B-GGUF)
+
+**Download the original QLoRA adapter:**
+
+[OTSE-Qwen3-4B-QLoRA](https://huggingface.co/diptoimran/OTSE-Qwen3-4B-QLoRA)
 
 ### Install the Model Locally
 
-After obtaining the GGUF, place it at:
+After downloading the GGUF, create the `deployment/` directory if it does not exist, and place the model at:
 
 ```text
 deployment/otse-qwen4b-Q4_K_M.gguf
@@ -212,6 +211,18 @@ ollama show otse-qwen4b-final
 
 The original model has been successfully imported into Ollama and verified with a JSON generation smoke test.
 
+### Fine-Tuning Adapter
+
+The original QLoRA adapter is available at:
+
+[OTSE-Qwen3-4B-QLoRA](https://huggingface.co/diptoimran/OTSE-Qwen3-4B-QLoRA)
+
+The adapter contains the LoRA weights trained using 745 teacher-generated extraction examples from 391 unique transceiver datasheets.
+
+Researchers can use the adapter with the original `Qwen/Qwen3-4B-Instruct-2507` base model for further adaptation.
+
+The adapter is not a standalone GGUF model; loading it requires the compatible base model and PEFT tooling.
+
 ## 5. Running OTSE
 
 ### Command-Line Extraction
@@ -228,11 +239,11 @@ The pipeline parses the PDF, extracts atomic specifications, validates the outpu
 
 Generated results are saved under `runs/`, typically including:
 
-- `content.md`: parsed datasheet content.
+- `content.md`: Parsed datasheet content.
 - `parsed.json`: PDF parsing metadata.
-- `raw_llm.json`: extracted raw parameter values.
-- `specs.json`: validated structured specifications.
-- `meta.json`: model, source, validation, and timing metadata.
+- `raw_llm.json`: Extracted raw parameter values.
+- `specs.json`: Validated structured specifications.
+- `meta.json`: Model, source, validation, and timing metadata.
 
 ### Streamlit Application
 
@@ -378,7 +389,7 @@ python -m otse_auto selftest
 
 At the release checkpoint, the two suites passed 6 and 38 tests respectively.
 
-The original training JSONL files and source PDFs may be distributed separately or withheld where redistribution permissions do not permit publication.
+The original training JSONL files and source PDFs are not included in the public release. Their availability is subject to redistribution permissions.
 
 A complete independent reproduction requires access to the appropriate source documents, training records, model weights, compatible dependencies, and the frozen evaluation references.
 
@@ -405,4 +416,4 @@ Further work may also explore larger models, additional QLoRA training, and serv
 
 Another important direction is measuring the effectiveness and time cost of human verification and correction.
 
-Community contributions of permitted, source-evidenced annotations, test cases, and extraction improvements are welcome.
+Community contributions of permitted,
