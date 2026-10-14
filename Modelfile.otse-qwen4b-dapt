@@ -1,0 +1,4 @@
+FROM "C:/Users/dipto/Downloads/Projects/Imran OFC 2026/OTSE-Optical-Transceiver-Spec-Extractor-imran/deployment/otse-dapt-Q4_K_M.gguf"
+TEMPLATE {{ .Prompt }}
+PARAMETER num_ctx 8192
+PARAMETER temperature 0

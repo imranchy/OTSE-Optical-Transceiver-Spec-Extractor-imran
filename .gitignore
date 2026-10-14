@@ -152,3 +152,78 @@ __pycache__/
 *.py[cod]
 .venv/
 .pytest_cache/
+
+.venv/
+__pycache__/
+*.pyc
+
+# Large models and checkpoints
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.bin
+
+# Large local datasets
+*.pdf
+
+# Temporary files
+*.tmp
+*.log
+
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Model weights and checkpoints
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# Local model exports
+deployment/merged_*/
+deployment/*-f16/
+deployment/*.gguf
+
+# PDFs and archives
+*.pdf
+*.zip
+*.7z
+*.tar
+*.gz
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+
+# Temporary and cache files
+*.tmp
+*.log
+.cache/
+
+# Local datasets and annotations
+backup_cached_annotations/
+gold_dataset/
+data/domain_resources/
+source_grounding_full60/
+all_2880_evidence_candidates.csv
+all_60_pdf_page_text.csv
+gold_review*.csv
+document_adjudication_tracker.csv
+
+# Large experimental data
+experiments/dapt_vs_sft/data/
+experiments/dapt_vs_sft/outputs/
+deployment/*.gguf
+
+# Historical reference data and raw predictions
+otse_final_reference_v1/
+results/final_matched_*/
